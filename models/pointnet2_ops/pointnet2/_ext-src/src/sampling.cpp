@@ -31,7 +31,7 @@ at::Tensor gather_points(at::Tensor points, at::Tensor idx) {
 	    points.size(0), points.size(1), points.size(2), idx.size(1),
 	    points.data<float>(), idx.data<int>(), output.data<float>());
     } else {
-	AT_CHECK(false, "CPU not supported");
+	TORCH_CHECK(false, "CPU not supported");
     }
 
     return output;

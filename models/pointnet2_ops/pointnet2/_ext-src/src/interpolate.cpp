@@ -93,7 +93,7 @@ at::Tensor three_interpolate_grad(at::Tensor grad_out, at::Tensor idx,
 	    grad_out.data<float>(), idx.data<int>(), weight.data<float>(),
 	    output.data<float>());
     } else {
-	AT_CHECK(false, "CPU not supported");
+	TORCH_CHECK(false, "CPU not supported");
     }
 
     return output;

@@ -1,6 +1,8 @@
 # 自用 3D AffordanceNet
 
 改了pointnet++的文件，让他适用于cuda11。pn3.0是个好东西，可惜大家都没等到3.0（允悲
+---
+
 原网站：[ori_net](https://github.com/Gorilla-Lab-SCUT/AffordanceNet)
 
 This repository is the official experiment implementation of 3D AffordanceNet benchmark.

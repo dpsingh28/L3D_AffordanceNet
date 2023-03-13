@@ -1,6 +1,6 @@
 # 自用 3D AffordanceNet
 
-改了pointnet++的文件，让他适用于cuda11。setup似乎和原本的不太一样，我不太确定需不需要改，就暂时没动。pn3.0是个好东西，可惜大家都没等到3.0（允悲
+改了pointnet++的文件，让他适用于cuda11。pn3.0是个好东西，可惜大家都没等到3.0（允悲
 
 ---
 
@@ -30,11 +30,9 @@ All the codes are tested in the following environment:
 
 You can install the required packages by running the following command:
 ```
-（自用）
-pip install torch==1.10.1+cu111 torchvision==0.11.2+cu111 torchaudio==0.10.1 -f https://download.pytorch.org/whl/cu113/torch_stable.html
-or
+（按需去官网自选）
 pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 torchaudio==0.11.0 --extra-index-url https://download.pytorch.org/whl/cu113
-
+（这玩意儿也改了）
 pip install -r requirements.txt
 ```
 

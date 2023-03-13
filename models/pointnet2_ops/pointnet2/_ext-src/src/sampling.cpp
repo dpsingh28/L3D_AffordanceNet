@@ -57,7 +57,7 @@ at::Tensor gather_points_grad(at::Tensor grad_out, at::Tensor idx,
 	    grad_out.size(0), grad_out.size(1), n, idx.size(1),
 	    grad_out.data<float>(), idx.data<int>(), output.data<float>());
     } else {
-	AT_CHECK(false, "CPU not supported");
+	TORCH_CHECK(false, "CPU not supported");
     }
 
     return output;

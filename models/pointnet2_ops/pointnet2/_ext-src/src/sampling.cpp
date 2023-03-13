@@ -79,7 +79,7 @@ at::Tensor furthest_point_sampling(at::Tensor points, const int nsamples) {
 	    points.size(0), points.size(1), nsamples, points.data<float>(),
 	    tmp.data<float>(), output.data<int>());
     } else {
-	AT_CHECK(false, "CPU not supported");
+	TORCH_CHECK(false, "CPU not supported");
     }
 
     return output;

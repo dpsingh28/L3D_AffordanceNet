@@ -38,7 +38,8 @@ if __name__ == "__main__":
         cfg.work_dir = args.work_dir
     if args.gpu != None:
         cfg.training_cfg.gpu = args.gpu
-    print(cfg)
+    # 这里可能要写一个改格式的decoder才能print
+    # print(cfg)
     logger = IOStream(opj(cfg.work_dir, 'run.log'))
     os.environ["CUDA_VISIBLE_DEVICES"] = cfg.training_cfg.gpu
     num_gpu = len(cfg.training_cfg.gpu.split(','))

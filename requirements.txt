@@ -17,3 +17,4 @@ yapf==0.30.0
 gorilla-core
 opencv-python
 opencv-contrib-python
+protocol==3.19.0

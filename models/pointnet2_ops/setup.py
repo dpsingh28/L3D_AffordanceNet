@@ -3,6 +3,7 @@ from setuptools import setup, find_packages
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension
 import glob
 import builtins
+import os
 
 builtins.__POINTNET2_SETUP__ = True
 

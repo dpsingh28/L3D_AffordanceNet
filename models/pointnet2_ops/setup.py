@@ -11,7 +11,6 @@ _ext_src_root = 'pointnet2/_ext-src'
 _ext_sources = glob.glob('{}/src/*.cpp'.format(_ext_src_root)) + glob.glob(
     '{}/src/*.cu'.format(_ext_src_root))
 _ext_headers = glob.glob('{}/include/*'.format(_ext_src_root))
-headers = "-I" + os.path.join(os.path.dirname(os.path.abspath(__file__)), '_ext_src', 'include')
 
 requirements = ['etw_pytorch_utils==1.0.0', 'h5py', 'pprint']
 
@@ -27,9 +26,9 @@ setup(
             sources=_ext_sources,
             extra_compile_args={
                 'cxx':
-                ['-O2', headers, '-I{}'.format('{}/include'.format(_ext_src_root))],
+                ['-O2', '-I{}'.format('{}/include'.format(_ext_src_root))],
                 'nvcc':
-                ['-O2', headers, '-I{}'.format('{}/include'.format(_ext_src_root))]
+                ['-O2', '-I{}'.format('{}/include'.format(_ext_src_root))]
             })
     ],
     cmdclass={'build_ext': BuildExtension})

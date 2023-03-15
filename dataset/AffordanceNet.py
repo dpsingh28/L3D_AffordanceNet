@@ -55,8 +55,19 @@ class AffordNetDataset(Dataset):
                     temp_data_rotate = pkl.load(f)
                 with open(opj(self.data_dir, 'full_shape_%s_data.pkl' % self.split), 'rb') as f:
                     temp_data = pkl.load(f)
+            elif self.split == 'train' or self.split == 'test':
+                with open(opj(self.data_dir, 'full_shape_train_data.pkl'), 'rb') as f:
+                    temp_data = pkl.load(f)
+                train_set, test_set = train_test_split(temp_data, test_size=0.14, random_state=42)
+                if self.split == 'train':
+                    print('train')
+                    temp_data = train_set
+                else:
+                    print('test')
+                    temp_data = test_set
             else:
-                with open(opj(self.data_dir, 'full_shape_%s_data.pkl' % self.split), 'rb') as f:
+                print('val')
+                with open(opj(self.data_dir, 'full_shape_val_data.pkl'), 'rb') as f:
                     temp_data = pkl.load(f)
         for index, info in enumerate(temp_data):
             if self.partial:

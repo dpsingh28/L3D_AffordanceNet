@@ -7,6 +7,7 @@ import h5py
 import json
 from utils.provider import rotate_point_cloud_SO3, rotate_point_cloud_y
 import pickle as pkl
+from sklearn.model_selection import train_test_split
 
 
 def pc_normalize(pc):
@@ -56,6 +57,7 @@ class AffordNetDataset(Dataset):
                 with open(opj(self.data_dir, 'full_shape_%s_data.pkl' % self.split), 'rb') as f:
                     temp_data = pkl.load(f)
             elif self.split == 'train' or self.split == 'test':
+                # 感觉这么写多少有点降智（捂脸），让我思考一下怎么优雅一点
                 with open(opj(self.data_dir, 'full_shape_train_data.pkl'), 'rb') as f:
                     temp_data = pkl.load(f)
                 train_set, test_set = train_test_split(temp_data, test_size=0.14, random_state=42)

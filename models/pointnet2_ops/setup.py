@@ -7,6 +7,7 @@ import os
 
 builtins.__POINTNET2_SETUP__ = True
 
+# 这里推荐改成自己的绝对路径，有的系统这样写没问题，有的会炸。直接在代码里读绝对路径也还是会有问题。
 _ext_src_root = 'pointnet2/_ext-src'
 _ext_sources = glob.glob('{}/src/*.cpp'.format(_ext_src_root)) + glob.glob(
     '{}/src/*.cu'.format(_ext_src_root))

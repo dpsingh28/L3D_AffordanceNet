@@ -46,7 +46,7 @@ python setup.py build_ext --inplace
 The following set up is for DGCNN, you can change to PointNet++ accordingly.
 
 First download the whole dataset from [here](https://drive.google.com/drive/folders/1s5W0Nfz9NEN8gP14tge8GuouUDXs2Ssq?usp=sharing) and extract the files to the `data_root`, then modify the dataset `data_root` in [configuration(full-shape for example)](config/dgcnn/estimation_cfg.py), the dataset `data_root` should obey the data structure below: 
-
+作者不给测试集，已经自己按72：14：14的比例重新分了，正在试成不成。
 ```
 data_root
     ├── task_train_data.pkl

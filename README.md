@@ -60,6 +60,7 @@ Then to train a model from scratch:
 
 ```
 python train.py config/dgcnn/estimation_cfg.py --work_dir TPATH_TO_LOG_DIR --gpu 0,1
+python train.py config/pointnet2/partial_cfg.py --work_dir ./log/pn2/train --gpu 0
 ```
 
 After training, to test a model:

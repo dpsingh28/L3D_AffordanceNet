@@ -46,7 +46,7 @@ raise CalledProcessError(retcode, process.args,
 subprocess.CalledProcessError: Command '['ninja', '-v']' returned non-zero exit status 1.
 ```
 这样改setup.py:
-...
+```
 cmdclass={'build_ext': BuildExtension.with_options(use_ninja=False)})
 ```
 

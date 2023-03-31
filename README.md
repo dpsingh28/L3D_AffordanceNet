@@ -41,10 +41,11 @@ To install the cuda kernel, go to [models/pointnet2_ops](models/pointnet2_ops) a
 python setup.py build_ext --inplace
 ```
 PS：出现以下错误的时候：
+```
 raise CalledProcessError(retcode, process.args,
 subprocess.CalledProcessError: Command '['ninja', '-v']' returned non-zero exit status 1.
-这样改setup.py:
 ```
+这样改setup.py:
 ...
 cmdclass={'build_ext': BuildExtension.with_options(use_ninja=False)})
 ```

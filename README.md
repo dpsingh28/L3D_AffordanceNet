@@ -2,8 +2,6 @@
 
 改了pointnet++的文件，让他适用于cuda11。pn3.0是个好东西，可惜大家都没等到3.0（允悲
 
-才发现几乎所有6Dof的抓取估计都需要CAD模型，你又不提供，所以你存在的意义是什么呢: )
-
 ---
 
 原网站：[ori_net](https://github.com/Gorilla-Lab-SCUT/AffordanceNet)

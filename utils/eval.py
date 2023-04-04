@@ -21,7 +21,7 @@ def evaluation(logger, cfg, model, test_loader, affordance):
         count = 0.0
         for i,  temp_data in tqdm(enumerate(test_loader), total=len(test_loader), smoothing=0.9):
 
-            (data, data1, label, modelid, modelcat) = temp_data
+            (data, data1, label, modelid, modelcat, class_weights) = temp_data
 
             data, label = data.float().cuda(), label.float().cuda()
             data = data.permute(0, 2, 1)

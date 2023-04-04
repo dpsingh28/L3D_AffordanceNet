@@ -104,11 +104,15 @@ def build_loader(cfg, dataset_dict):
 
 
 def build_loss(cfg):
+    loss_label = 'weighted'
     if cfg.training_cfg.get("semi", False):
         loss_fn = loss.VATLoss(warmup_epoch=0)
         # loss_fn = loss.SemiLoss()
     else:
-        loss_fn = loss.EstimationLoss()
+        if loss_label is not 'weighted':
+            loss_fn = loss.EstimationLoss()
+        else:
+            loss_fn = loss.WeightedEstimationLoss()
     return loss_fn
 
 

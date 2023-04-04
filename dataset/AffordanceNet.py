@@ -50,7 +50,7 @@ class AffordNetDataset(Dataset):
         else:
             if self.partial:
                 if self.split == 'train' or self.split == 'test':
-                    with open(opj(self.data_dir, 'partial_train_data.pkl' % self.split), 'rb') as f:
+                    with open(opj(self.data_dir, 'partial_train_data.pkl'), 'rb') as f:
                         temp_data = pkl.load(f)
                         train_set, test_set = train_test_split(temp_data, test_size=0.14, random_state=42)
                         if self.split == 'train':
@@ -60,7 +60,7 @@ class AffordNetDataset(Dataset):
                             print('test')
                             temp_data = test_set
                 else:
-                    with open(opj(self.data_dir, 'partial_val_data.pkl' % self.split), 'rb') as f:
+                    with open(opj(self.data_dir, 'partial_val_data.pkl'), 'rb') as f:
                         temp_data = pkl.load(f)
             elif self.rotate != "None" and self.split != 'train':
                 with open(opj(self.data_dir, 'rotate_%s_data.pkl' % self.split), 'rb') as f:

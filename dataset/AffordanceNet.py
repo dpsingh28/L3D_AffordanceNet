@@ -49,8 +49,19 @@ class AffordNetDataset(Dataset):
                 temp_data = pkl.load(f)
         else:
             if self.partial:
-                with open(opj(self.data_dir, 'partial_%s_data.pkl' % self.split), 'rb') as f:
-                    temp_data = pkl.load(f)
+                if self.split == 'train' or self.split == 'test':
+                    with open(opj(self.data_dir, 'partial_train_data.pkl' % self.split), 'rb') as f:
+                        temp_data = pkl.load(f)
+                        train_set, test_set = train_test_split(temp_data, test_size=0.14, random_state=42)
+                        if self.split == 'train':
+                            print('train')
+                            temp_data = train_set
+                        else:
+                            print('test')
+                            temp_data = test_set
+                else:
+                    with open(opj(self.data_dir, 'partial_val_data.pkl' % self.split), 'rb') as f:
+                        temp_data = pkl.load(f)
             elif self.rotate != "None" and self.split != 'train':
                 with open(opj(self.data_dir, 'rotate_%s_data.pkl' % self.split), 'rb') as f:
                     temp_data_rotate = pkl.load(f)
@@ -130,8 +141,19 @@ class AffordNetDataset(Dataset):
                 datas = (np.matmul(r_matrix, datas.T)).T
 
         datas, _, _ = pc_normalize(datas)
-
-        return datas, datas, targets, modelid, modelcat
+        
+        class_weights = np.ndarray((1,len(list(labels.values()))), dtype=np.float32)
+        # class_weights = torch.from_numpy(class_weights).to(torch.float32)
+        for i, (key, value) in enumerate(labels.items()):
+            if np.sum(value) == 0:
+                class_weights[0][i] = 0.1  # 标签中没有正样本，权重为0.1
+            else:
+                # class_weights[0][i] = 1.0 / np.sum(value)
+                class_weights[0][i] = 1.0
+                
+        # print(class_weights)
+        
+        return datas, datas, targets, modelid, modelcat, class_weights
 
     def __len__(self):
         return len(self.all_data)

@@ -40,12 +40,13 @@ class Trainer(object):
 
     def train(self):
         train_loss = 0.0
+        loss_label = 'weighted'
         count = 0.0
         self.model.train()
         num_batches = len(self.train_loader)
         start = time()
         self.logger.cprint("Epoch(%d) begin training........" % self.epoch)
-        for data, data1, label, _, _ in tqdm(self.train_loader, total=len(self.train_loader), smoothing=0.9):
+        for data, data1, label, _, _, class_weights in tqdm(self.train_loader, total=len(self.train_loader), smoothing=0.9):
             if self.train_unlabel_loader is not None:
                 try:
                     ul_data, ul_data1, _, _ = next(self.unlabel_loader_iter)
@@ -55,7 +56,7 @@ class Trainer(object):
                     ul_data, ul_data1, _, _ = next(self.unlabel_loader_iter)
                     ul_data, ul_data1 = ul_data.float(), ul_data1.float()
 
-            data, label = data.float().cuda(), label.float().cuda()
+            data, label, class_weights = data.float().cuda(), label.float().cuda(), class_weights.float().cuda()
             data = data.permute(0, 2, 1)
             batch_size = data.size()[0]
             num_point = data.size()[2]
@@ -67,13 +68,15 @@ class Trainer(object):
             else:
                 afford_pred = torch.sigmoid(self.model(data))
             afford_pred = afford_pred.permute(0, 2, 1).contiguous()
-            if self.train_unlabel_loader is not None:
+            if self.train_unlabel_loader is not None and loss_label is not 'weighted':
                 l_pred = afford_pred[:batch_size, :, :]  # VAT
                 ul_pred = afford_pred[batch_size:, :, :]  # VAT
                 loss = self.loss(self.model, data, ul_data,
                                  l_pred, label, ul_pred, self.epoch)  # VAT
-            else:
+            elif self.train_unlabel_loader is None and loss_label is not 'weighted':
                 loss = self.loss(afford_pred, label)
+            else:
+                loss = self.loss(afford_pred, label, class_weights)
 
             loss.backward()
             self.optimizer.step()
@@ -87,6 +90,10 @@ class Trainer(object):
         outstr = 'Train(%d), loss: %.6f, time: %d s' % (
             self.epoch, train_loss*1.0/num_batches, epoch_time//1)
         self.writer.add_scalar('Loss', train_loss*1.0/num_batches, self.epoch)
+        # 获取梯度信息
+        for name, param in self.model.named_parameters():
+            if param.grad is not None:
+                self.writer.add_scalar('grad/{}'.format(name), torch.norm(param.grad), self.epoch)
         self.logger.cprint(outstr)
         self.epoch += 1
 

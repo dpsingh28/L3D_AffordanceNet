@@ -79,7 +79,7 @@ def build_loader(cfg, dataset_dict):
     if "test_set" in dataset_dict:
         test_set = dataset_dict["test_set"]
         test_loader = DataLoader(
-            test_set, batch_size=1, shuffle=False, num_workers=4, drop_last=False)
+            test_set, batch_size=1, shuffle=False, num_workers=0, drop_last=False)
         loader_dict = dict()
         loader_dict.update({"test_loader": test_loader})
         return loader_dict
@@ -87,16 +87,16 @@ def build_loader(cfg, dataset_dict):
     val_set = dataset_dict["val_set"]
     batch_size_factor = 1 if not cfg.training_cfg.get('semi', False) else 2
     train_loader = DataLoader(train_set, batch_size=cfg.training_cfg.batch_size // batch_size_factor,
-                              shuffle=True, drop_last=True, num_workers=8)
+                              shuffle=True, drop_last=True, num_workers=0)
     val_loader = DataLoader(val_set, batch_size=1,
-                            shuffle=False, num_workers=8, drop_last=False)
+                            shuffle=False, num_workers=0, drop_last=False)
     loader_dict = dict(
         train_loader=train_loader,
         val_loader=val_loader
     )
     if "train_unlabel_set" in dataset_dict:
         train_unlabel_set = dataset_dict["train_unlabel_set"]
-        train_unlabel_loader = DataLoader(train_unlabel_set, num_workers=4,
+        train_unlabel_loader = DataLoader(train_unlabel_set, num_workers=0,
                                           batch_size=cfg.training_cfg.batch_size//batch_size_factor, shuffle=True, drop_last=True)
         loader_dict.update({"train_unlabel_loader": train_unlabel_loader})
 

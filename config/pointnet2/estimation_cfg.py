@@ -36,6 +36,7 @@ training_cfg = dict(
     semi=False,
     rotate_type=None,
     batch_size=16,
+    num_workers=8,
     epoch=200,
     seed=1,
     dropout=0.5,
@@ -48,7 +49,7 @@ training_cfg = dict(
 )
 
 data = dict(
-    data_root='PATH/TO/DATASET',
+    data_root='/home/daman/AffordanceNet/dataset/data_root',
     category=['grasp', 'contain', 'lift', 'openable', 'layable', 'sittable',
               'support', 'wrap_grasp', 'pourable', 'move', 'displaY', 'pushable', 'pull',
               'listen', 'wear', 'press', 'cut', 'stab']

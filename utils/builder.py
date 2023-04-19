@@ -96,7 +96,7 @@ def build_loader(cfg, dataset_dict):
     )
     if "train_unlabel_set" in dataset_dict:
         train_unlabel_set = dataset_dict["train_unlabel_set"]
-        train_unlabel_loader = DataLoader(train_unlabel_set, num_workers=0,
+        train_unlabel_loader = DataLoader(train_unlabel_set, num_workers=cfg.training_cfg.num_workers,
                                           batch_size=cfg.training_cfg.batch_size//batch_size_factor, shuffle=True, drop_last=True)
         loader_dict.update({"train_unlabel_loader": train_unlabel_loader})
 

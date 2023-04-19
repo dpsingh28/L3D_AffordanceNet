@@ -1,11 +1,17 @@
 # Copyright (c) Gorilla-Lab. All rights reserved.
 import torch
+import pytorch3d
 import numpy as np
+import colorsys
 from os.path import join as opj
 from tqdm import tqdm
 from sklearn.metrics import average_precision_score, f1_score, roc_auc_score
 
-
+def get_colors(num_aff):
+    HSV_tuples = [(x*1.0/num_aff, 0.5, 0.5) for x in range(num_aff)]
+    RGB_tuples = map(lambda x: colorsys.hsv_to_rgb(*x), HSV_tuples)
+    return list(RGB_tuples)
+    
 def evaluation(logger, cfg, model, test_loader, affordance):
     exp_name = cfg.work_dir.split('/')[-1]
     results = torch.zeros(
@@ -13,8 +19,10 @@ def evaluation(logger, cfg, model, test_loader, affordance):
     targets = torch.zeros(
         (len(test_loader), 2048, len(affordance)))
     coordinate = np.zeros((0, 2048, 3))
+    # print("len(affordance): ",len(affordance))
     modelids = []
     modelcats = []
+    color_list = get_colors(len(affordance))
     with torch.no_grad():
         model.eval()
         total_L2distance = 0
@@ -22,7 +30,6 @@ def evaluation(logger, cfg, model, test_loader, affordance):
         for i,  temp_data in tqdm(enumerate(test_loader), total=len(test_loader), smoothing=0.9):
 
             (data, data1, label, modelid, modelcat, class_weights) = temp_data
-
             data, label = data.float().cuda(), label.float().cuda()
             data = data.permute(0, 2, 1)
             batch_size = data.size()[0]
@@ -30,6 +37,12 @@ def evaluation(logger, cfg, model, test_loader, affordance):
             count += batch_size * num_point
             afford_pred = torch.sigmoid(model(data))
             afford_pred = afford_pred.permute(0, 2, 1).contiguous()
+            
+            # afford_colors 
+            point_cloud = pytorch3d.structure.PointClouds(points = data)
+            
+            
+            # print("afford_pred.shape: ",afford_pred.shape)
             L2distance = torch.sum(
                 torch.pow(label-afford_pred, 2), dim=(0, 1))
             total_L2distance += L2distance

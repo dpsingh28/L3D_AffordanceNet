@@ -9,7 +9,9 @@ from tensorboardX import SummaryWriter
 from utils import *
 from utils.eval import evaluation
 from time import time
+import wandb
 
+wandb.login()
 
 class Trainer(object):
     def __init__(self, cfg, running):
@@ -46,6 +48,8 @@ class Trainer(object):
         num_batches = len(self.train_loader)
         start = time()
         self.logger.cprint("Epoch(%d) begin training........" % self.epoch)
+        
+        wandb.init(project=self.cfg.model.type, config=self.cfg.training_cfg)
         for data, data1, label, _, _, class_weights in tqdm(self.train_loader, total=len(self.train_loader), smoothing=0.9):
             if self.train_unlabel_loader is not None:
                 try:
@@ -77,12 +81,13 @@ class Trainer(object):
                 loss = self.loss(afford_pred, label)
             else:
                 loss = self.loss(afford_pred, label, class_weights)
-
+            print("shapes: ",afford_pred.shape,label.shape,class_weights.shape)
             loss.backward()
             self.optimizer.step()
 
             count += batch_size * num_point
             train_loss += loss.item()
+            wandb.log({'loss':loss.cpu().item() , 'lr':float(self.optimizer.param_groups[0]['lr'])})
         self.scheduler.step()
         if self.bn_momentum != None:
             self.model.apply(lambda x: self.bn_momentum(x, self.epoch))

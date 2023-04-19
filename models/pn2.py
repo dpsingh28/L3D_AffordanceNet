@@ -25,12 +25,12 @@ class PointNet_Estimation(nn.Module):
         self.fp3 = PointNetFeaturePropagation(in_channel=1536, mlp=[256, 256])
         self.fp2 = PointNetFeaturePropagation(in_channel=576, mlp=[256, 128])
         self.fp1 = PointNetFeaturePropagation(
-            in_channel=134+additional_channel, mlp=[128, 128])
+            in_channel=134+additional_channel, mlp=[128, 512])
 
         self.classifier = nn.ModuleList()
         for i in range(num_classes):
             classifier = nn.Sequential(
-                nn.Conv1d(128, 128, 1),
+                nn.Conv1d(512, 128, 1),
                 nn.BatchNorm1d(128),
                 # nn.Dropout(0.5),
                 nn.Conv1d(128, 1, 1)
@@ -62,10 +62,12 @@ class PointNet_Estimation(nn.Module):
         l2_points = self.fp3(l2_xyz, l3_xyz, l2_points, l3_points)
         # print(l2_points.size())
         l1_points = self.fp2(l1_xyz, l2_xyz, l1_points, l2_points)
-        # print(l1_points.size())
+        # print("l1",l1_points.size())
         l0_points = self.fp1(l0_xyz, l1_xyz, torch.cat(
             [l0_xyz, l0_points], 1), l1_points)
-        # print(l0_points.size())
+        
+        clip_align_tensor = l0_points.unsqueeze(-1).repeat(1,1,1,18)#.permute(0,2,3,1)
+        print(clip_align_tensor.shape)
         # FC layers
         score = self.classifier[0](l0_points)
         for index, classifier in enumerate(self.classifier):
@@ -73,7 +75,8 @@ class PointNet_Estimation(nn.Module):
                 continue
             score_ = classifier(l0_points)
             score = torch.cat((score, score_), dim=1)
-        return score
+        
+        return score, clip_align_tensor
 
 
 '''

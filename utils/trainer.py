@@ -11,8 +11,10 @@ from utils.eval import evaluation
 from time import time
 import wandb
 
-wandb.login()
+##CLIP Imports
+import clip
 
+# wandb.login()
 class Trainer(object):
     def __init__(self, cfg, running):
         super().__init__()
@@ -49,8 +51,28 @@ class Trainer(object):
         start = time()
         self.logger.cprint("Epoch(%d) begin training........" % self.epoch)
         
+        
+        ##CLIP Embedding stuff##
+        clip_model, preprocess = clip.load("ViT-B/32", device='cuda')
+        
+        affordances_list = ['grasp','contain','lift','openable','layable','sittable',
+                            'support','wrap grasp', 'pourable', 'move', 'display', 
+                            'pushable', 'pull', 'listen', 'wear', 'press', 'cut', 'stab']
+        
+        # affordances_list = ['cut','stab']
+        
+        cos = torch.nn.CosineSimilarity(dim=-1,eps=1e-6)
+        i = 0
+        ##CLIP Embedding Stuff ends##
         wandb.init(project=self.cfg.model.type, config=self.cfg.training_cfg)
         for data, data1, label, _, _, class_weights in tqdm(self.train_loader, total=len(self.train_loader), smoothing=0.9):
+
+            affordance_token = clip.tokenize(affordances_list).cuda()
+            affordance_embeddings = clip_model.encode_text(affordance_token)
+            affordance_embeddings = affordance_embeddings.repeat(data.shape[0],data.shape[1],1,1) # M(18) x 512 shape
+            # affordance_embeddings = affordance_embeddings.permute(0,1,2,3)
+            # print("affordance embeddings",affordance_embeddings.shape)
+
             if self.train_unlabel_loader is not None:
                 try:
                     ul_data, ul_data1, _, _ = next(self.unlabel_loader_iter)
@@ -70,18 +92,49 @@ class Trainer(object):
                 data_ = torch.cat((data, ul_data), dim=0)  # VAT
                 afford_pred = torch.sigmoid(self.model(data_))
             else:
-                afford_pred = torch.sigmoid(self.model(data))
-            afford_pred = afford_pred.permute(0, 2, 1).contiguous()
+                # model_out,afford_clip_emb = self.model(data)
+                afford_clip_emb = self.model(data)
+                afford_clip_emb = torch.tanh(afford_clip_emb)
+                # afford_pred = torch.sigmoid(model_out)
+            # afford_pred = afford_pred.permute(0, 2, 1).contiguous()
             if self.train_unlabel_loader is not None and loss_label is not 'weighted':
                 l_pred = afford_pred[:batch_size, :, :]  # VAT
                 ul_pred = afford_pred[batch_size:, :, :]  # VAT
                 loss = self.loss(self.model, data, ul_data,
                                  l_pred, label, ul_pred, self.epoch)  # VAT
             elif self.train_unlabel_loader is None and loss_label is not 'weighted':
+                # afford_pred_corr = cos(afford_pred_corr,affordance_embeddings)
+                # print("afford_pred_corr",afford_pred_corr.shape)
+                # loss = self.loss(afford_pred_corr, label)
                 loss = self.loss(afford_pred, label)
             else:
-                loss = self.loss(afford_pred, label, class_weights)
-            print("shapes: ",afford_pred.shape,label.shape,class_weights.shape)
+                # print(torch.max(affordance_embeddings),torch.min(affordance_embeddings))
+                afford_pred_corr = (cos(afford_clip_emb,torch.tanh(affordance_embeddings)))
+                # print(afford_pred_corr.shape)
+                # print(torch.amin(afford_pred_corr,dim=-1).shape)
+
+                # label = torch.where(label>0.2,1.0,0.0)
+
+                # softmax_fn = torch.nn.Softmax(dim=-1)
+                # afford_pred_corr = softmax_fn(afford_pred_corr)
+                # label = softmax_fn(label)
+                # print(torch.max(afford_pred_corr),torch.min(afford_pred_corr),torch.max(label),torch.min(label))
+                # print("afford_pred_corr",afford_pred_corr.shape)
+                # print(afford_pred_corr.shape,label[:,:,16:].shape,class_weights.shape)
+                loss_fn = torch.nn.MSELoss()
+                loss_clip_emb = loss_fn(afford_pred_corr,label[:,:,:])
+                # loss_clip_emb = self.loss(afford_pred_corr, label[:,:,16:], class_weights[:,:,16:])
+                # print(torch.sum(label[0,:,:],dim=0))
+                # loss = torch.mean(class_weights*(torch.abs(afford_pred_corr-label)))
+                
+                # print(afford_pred_corr[0,-2,:],label[0,-2,:])
+                # loss_seg = self.loss(afford_pred, label, class_weights)
+                loss = loss_clip_emb #+ loss_seg
+                # print(afford_pred.shape,label.shape)
+            # print("shapes: ",afford_pred.shape,label.shape,class_weights.shape)
+            if i%10 == 0:
+                print(loss)
+            i=i+1
             loss.backward()
             self.optimizer.step()
 

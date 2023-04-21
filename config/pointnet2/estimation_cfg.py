@@ -43,13 +43,13 @@ training_cfg = dict(
     gpu='4',
     workflow=dict(
         train=1,
-        val=1
+        val=0
     ),
     bn_momentum=PN2_BNMomentum(origin_m=0.1, m_decay=0.5, step=20)
 )
 
 data = dict(
-    data_root='/home/daman/AffordanceNet/dataset/data_root',
+    data_root='/home/daman/AffordanceNet_daman/dataset/data_root',
     category=['grasp', 'contain', 'lift', 'openable', 'layable', 'sittable',
               'support', 'wrap_grasp', 'pourable', 'move', 'displaY', 'pushable', 'pull',
               'listen', 'wear', 'press', 'cut', 'stab']

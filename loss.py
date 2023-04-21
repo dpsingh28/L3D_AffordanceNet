@@ -17,8 +17,12 @@ class WeightedEstimationLoss(nn.Module):
         temp1 = -torch.mul(1-target, torch.log(1-pred+1e-6))
         temp2 = -torch.mul(weights,
                            torch.mul(target, torch.log(pred+1e-6)))
-        temp = temp1+temp2
+        # temp = (torch.abs(pred-target))
+        # temp = temp1+temp2
+        # temp3 = -torch.mul(weights,(torch.log(pred+1e-6)))
+        temp = temp1 + temp2
         WCELoss = torch.sum(torch.mean(temp, (0, 1)))
+        # WCELoss = torch.mean(temp)
 
         return WCELoss
         

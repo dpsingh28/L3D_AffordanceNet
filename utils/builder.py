@@ -111,8 +111,11 @@ def build_loss(cfg):
     else:
         if loss_label is not 'weighted':
             loss_fn = loss.EstimationLoss()
+            print("h1")
         else:
             loss_fn = loss.WeightedEstimationLoss()
+            print("h2")
+
     return loss_fn
 
 

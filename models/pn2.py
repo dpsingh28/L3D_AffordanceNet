@@ -43,6 +43,8 @@ class PointNet_Estimation(nn.Module):
                                                nn.Linear(128,64) , nn.ReLU(),
                                                nn.Linear(64, num_classes))
 
+        # self.bn = nn.BatchNorm1d(512)
+
     def forward(self, xyz):
         # Set Abstraction layers
         xyz = xyz.contiguous()
@@ -86,6 +88,20 @@ class PointNet_Estimation(nn.Module):
         #     score = torch.cat((score, score_), dim=1)
         
         return class_out, clip_align_tensor
+    
+        # # FC layers
+        # print(l0_points.shape)
+        # score = self.classifier[0](l0_points)
+        # print(score.shape)
+        # for index, classifier in enumerate(self.classifier):
+        #     if index == 0:
+        #         continue
+        #     score_ = classifier(l0_points)
+        #     score = torch.cat((score, score_), dim=1)
+        # print(score_.shape,score.shape)
+        # # score = l0_points.unsqueeze(-1).repeat(1,1,1,18).permute(0,2,3,1)
+        
+        # return score, clip_align_tensor
 
 
 '''

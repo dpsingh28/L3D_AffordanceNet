@@ -33,9 +33,10 @@ def build_model(cfg):
         model_info = cfg.model
         weights_init = model_info.get('weights_init', None)
         model_name = model_info.type
+        num_classes = int(model_info.num_classes)
         model_cls = model_pool[model_name]
         num_category = len(cfg.data.category)
-        model = model_cls(model_info, num_category)
+        model = model_cls(model_info, num_category , num_classes)
         if weights_init != None:
             init_fn = init_pool[weights_init]
             model.apply(init_fn)

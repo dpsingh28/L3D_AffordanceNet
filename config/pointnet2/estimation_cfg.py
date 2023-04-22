@@ -25,7 +25,8 @@ optimizer = dict(
 
 model = dict(
     type='pn2',
-    weights_init='pn2_init'
+    weights_init='pn2_init',
+    num_classes=23
 )
 
 training_cfg = dict(

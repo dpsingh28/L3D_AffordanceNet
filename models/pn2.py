@@ -8,7 +8,7 @@ from .pointnet_util import PointNetSetAbstractionMsg, PointNetSetAbstraction, Po
 
 
 class PointNet_Estimation(nn.Module):
-    def __init__(self, args, num_classes, normal_channel=False):
+    def __init__(self, args, num_category, num_classes, normal_channel=False):
         super(PointNet_Estimation, self).__init__()
         if normal_channel:
             additional_channel = 3
@@ -27,15 +27,21 @@ class PointNet_Estimation(nn.Module):
         self.fp1 = PointNetFeaturePropagation(
             in_channel=134+additional_channel, mlp=[128, 512])
 
-        self.classifier = nn.ModuleList()
-        for i in range(num_classes):
-            classifier = nn.Sequential(
-                nn.Conv1d(512, 128, 1),
-                nn.BatchNorm1d(128),
-                # nn.Dropout(0.5),
-                nn.Conv1d(128, 1, 1)
-            )
-            self.classifier.append(classifier)
+        # self.classifier = nn.ModuleList()
+        # for i in range(num_category):
+        #     classifier = nn.Sequential(
+        #         nn.Conv1d(512, 128, 1),
+        #         nn.BatchNorm1d(128),
+        #         # nn.Dropout(0.5),
+        #         nn.Conv1d(128, 1, 1)
+        #     )
+        #     self.classifier.append(classifier)
+        
+        self.classifier_layers = nn.Sequential(nn.Linear(512,256) , nn.ReLU(),
+                                               nn.Linear(256,256) , nn.ReLU(),
+                                               nn.Linear(256,128) , nn.ReLU(),
+                                               nn.Linear(128,64) , nn.ReLU(),
+                                               nn.Linear(64, num_classes))
 
     def forward(self, xyz):
         # Set Abstraction layers
@@ -67,16 +73,19 @@ class PointNet_Estimation(nn.Module):
             [l0_xyz, l0_points], 1), l1_points)
         
         clip_align_tensor = l0_points.unsqueeze(-1).repeat(1,1,1,18)#.permute(0,2,3,1)
-        print(clip_align_tensor.shape)
+        # print(clip_align_tensor.shape)
         # FC layers
-        score = self.classifier[0](l0_points)
-        for index, classifier in enumerate(self.classifier):
-            if index == 0:
-                continue
-            score_ = classifier(l0_points)
-            score = torch.cat((score, score_), dim=1)
         
-        return score, clip_align_tensor
+        class_out = self.classifier_layers(l0_points)
+        
+        # score = self.classifier[0](l0_points)
+        # for index, classifier in enumerate(self.classifier):
+        #     if index == 0:
+        #         continue
+        #     score_ = classifier(l0_points)
+        #     score = torch.cat((score, score_), dim=1)
+        
+        return class_out, clip_align_tensor
 
 
 '''
@@ -86,7 +95,7 @@ class PointNet_Estimation(nn.Module):
         Semantic segmentation network that uses feature propogation layers
         Parameters
         ----------
-        num_classes: int
+        num_category: int
             Number of semantics classes to predict over -- size of softmax classifier that run for each point
         input_channels: int = 6
             Number of input channels in the feature descriptor for each point.  If the point cloud is Nx9, this
@@ -95,7 +104,7 @@ class PointNet_Estimation(nn.Module):
             Whether or not to use the xyz position of a point as a feature
     """
 
-    def __init__(self, arg, num_classes, input_channels=3, use_xyz=True):
+    def __init__(self, arg, num_category, input_channels=3, use_xyz=True):
         super().__init__()
 
         self.SA_modules = nn.ModuleList()
@@ -150,10 +159,10 @@ class PointNet_Estimation(nn.Module):
         # self.FC_layer = (pt_utils.Seq(128)
         #                  .conv1d(128, bn=True)
         #                  .dropout()
-        #                  .conv1d(num_classes, activation=None))
+        #                  .conv1d(num_category, activation=None))
 
         self.classifier = nn.ModuleList()
-        for i in range(num_classes):
+        for i in range(num_category):
             classifier = nn.Sequential(
                 nn.Conv1d(128, 128, 1),
                 nn.BatchNorm1d(128),

@@ -2,11 +2,13 @@
 import os
 from os.path import join as opj
 import numpy as np
+import torch
 from torch.utils.data import Dataset
 import h5py
 import json
 from utils.provider import rotate_point_cloud_SO3, rotate_point_cloud_y
 import pickle as pkl
+from ordered_set import OrderedSet
 from sklearn.model_selection import train_test_split
 
 
@@ -35,6 +37,9 @@ class AffordNetDataset(Dataset):
         self.partial = partial
         self.rotate = rotate
         self.semi = semi
+        self.num_classes : int = 0
+        self.classes = []
+        self.classes_set = None
 
         self.load_data()
 
@@ -89,10 +94,13 @@ class AffordNetDataset(Dataset):
                     temp_info = {}
                     temp_info["shape_id"] = info["shape_id"]
                     temp_info["semantic class"] = info["semantic class"]
+                    # print("temp_info[semantic class]: ",temp_info["semantic class"])
                     temp_info["affordance"] = info["affordance"]
                     temp_info["view_id"] = view
                     temp_info["data_info"] = data_info
                     self.all_data.append(temp_info)
+                    if temp_info["semantic class"] not in self.classes:
+                        self.classes.append(temp_info["semantic class"])
             elif self.split != 'train' and self.rotate != 'None':
                 rotate_info = temp_data_rotate[index]["rotate"][self.rotate]
                 full_shape_info = info["full_shape"]
@@ -104,6 +112,8 @@ class AffordNetDataset(Dataset):
                     temp_info["data_info"] = full_shape_info
                     temp_info["rotate_matrix"] = r_data.astype(np.float32)
                     self.all_data.append(temp_info)
+                    if temp_info["semantic class"] not in self.classes:
+                        self.classes.append(temp_info["semantic class"])
             else:
                 temp_info = {}
                 temp_info["shape_id"] = info["shape_id"]
@@ -111,12 +121,20 @@ class AffordNetDataset(Dataset):
                 temp_info["affordance"] = info["affordance"]
                 temp_info["data_info"] = info["full_shape"]
                 self.all_data.append(temp_info)
+                if temp_info["semantic class"] not in self.classes:
+                    self.classes.append(temp_info["semantic class"])
+        
+        self.classes = sorted(self.classes)
+        self.classes_set = OrderedSet(self.classes)
 
     def __getitem__(self, index):
 
         data_dict = self.all_data[index]
         modelid = data_dict["shape_id"]
         modelcat = data_dict["semantic class"]
+        
+        # print("modelcat: ",type(modelcat))
+        
 
         data_info = data_dict["data_info"]
         model_data = data_info["coordinate"].astype(np.float32)
@@ -143,6 +161,10 @@ class AffordNetDataset(Dataset):
         datas, _, _ = pc_normalize(datas)
         
         class_weights = np.ndarray((1,len(list(labels.values()))), dtype=np.float32)
+        # print(type(self.classes))
+        class_list = (self.classes)
+        class_label = torch.zeros((len(self.classes)))
+        class_label[self.classes_set.index(modelcat)] = 1
         # class_weights = torch.from_numpy(class_weights).to(torch.float32)
         for i, (key, value) in enumerate(labels.items()):
             if np.sum(value) == 0:
@@ -153,7 +175,7 @@ class AffordNetDataset(Dataset):
                 
         # print(class_weights)
         
-        return datas, datas, targets, modelid, modelcat, class_weights
+        return datas, datas, targets, modelid, modelcat, class_weights, class_list, class_label
 
     def __len__(self):
         return len(self.all_data)

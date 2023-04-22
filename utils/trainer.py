@@ -50,7 +50,12 @@ class Trainer(object):
         self.logger.cprint("Epoch(%d) begin training........" % self.epoch)
         
         wandb.init(project=self.cfg.model.type, config=self.cfg.training_cfg)
-        for data, data1, label, _, _, class_weights in tqdm(self.train_loader, total=len(self.train_loader), smoothing=0.9):
+        for data, data1, label, _, modelcat, class_weights, classes_list, class_labels in tqdm(self.train_loader, total=len(self.train_loader), smoothing=0.9):
+            # print("num_classes:", len(classes_list[0]))
+            # print("class_labels: ", class_labels.shape)
+            # print("classes_list: ", classes_list.shape)
+            
+        
             if self.train_unlabel_loader is not None:
                 try:
                     ul_data, ul_data1, _, _ = next(self.unlabel_loader_iter)
@@ -61,6 +66,7 @@ class Trainer(object):
                     ul_data, ul_data1 = ul_data.float(), ul_data1.float()
 
             data, label, class_weights = data.float().cuda(), label.float().cuda(), class_weights.float().cuda()
+            class_labels = class_labels.float().cuda()
             data = data.permute(0, 2, 1)
             batch_size = data.size()[0]
             num_point = data.size()[2]

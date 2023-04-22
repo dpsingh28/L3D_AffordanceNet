@@ -75,6 +75,9 @@ def evaluation(logger, cfg, model, test_loader, affordance):
             afford_pred = torch.sigmoid(model(data))
             afford_pred = afford_pred.permute(0, 2, 1).contiguous()
             
+            # print("modelcat: ",modelcat)
+            # break
+            
             afford_pred_single = torch.argmax(afford_pred , dim=-1).squeeze(0)
             label_pred_single = torch.argmax(label , dim=-1).squeeze(0)
             row_idx = torch.arange(color_list.size(0)).repeat_interleave(1)

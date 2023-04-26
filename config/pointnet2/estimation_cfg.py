@@ -42,8 +42,8 @@ training_cfg = dict(
     dropout=0.5,
     gpu='4',
     workflow=dict(
-        train=1,
-        val=0
+        train=0,
+        val=1
     ),
     bn_momentum=PN2_BNMomentum(origin_m=0.1, m_decay=0.5, step=20)
 )

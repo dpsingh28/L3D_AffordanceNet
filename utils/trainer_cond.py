@@ -13,6 +13,7 @@ import wandb
 
 ##CLIP Imports
 import clip
+import random
 
 # wandb.login()
 class Trainer(object):
@@ -72,73 +73,75 @@ class Trainer(object):
             batch_size = data.size()[0]
             num_point = data.size()[2]
             
-            # print("shapes",data.shape,label.shape)
-            affordance_token = clip.tokenize(affordances_list).cuda()
-            affordance_embeddings = clip_model.encode_text(affordance_token)#.unsqueeze(0)
-            affordance_embeddings = affordance_embeddings.repeat(data.shape[0],data.shape[2],1,1) # M(18) x 512 shape
+            for j in range(1):
+                label_idx = random.randint(0,17)
+                # print("shapes",data.shape,label.shape)
+                affordance_token = clip.tokenize(affordances_list[label_idx]).cuda()
+                affordance_embeddings = clip_model.encode_text(affordance_token)#.unsqueeze(0)
+                # affordance_embeddings = affordance_embeddings.repeat(data.shape[0]s,data.shape[2],1,1) # M(18) x 512 shape
 
-            # print(affordance_embeddings.shape)
+                # print(affordance_embeddings.shape)
 
-            if self.train_unlabel_loader is not None:
-                try:
-                    ul_data, ul_data1, _, _ = next(self.unlabel_loader_iter)
-                    ul_data, ul_data1 = ul_data.float(), ul_data1.float()
-                except StopIteration:
-                    self.unlabel_loader_iter = iter(self.train_unlabel_loader)
-                    ul_data, ul_data1, _, _ = next(self.unlabel_loader_iter)
-                    ul_data, ul_data1 = ul_data.float(), ul_data1.float()
+                if self.train_unlabel_loader is not None:
+                    try:
+                        ul_data, ul_data1, _, _ = next(self.unlabel_loader_iter)
+                        ul_data, ul_data1 = ul_data.float(), ul_data1.float()
+                    except StopIteration:
+                        self.unlabel_loader_iter = iter(self.train_unlabel_loader)
+                        ul_data, ul_data1, _, _ = next(self.unlabel_loader_iter)
+                        ul_data, ul_data1 = ul_data.float(), ul_data1.float()
 
-            self.optimizer.zero_grad()
-            if self.train_unlabel_loader is not None:
-                ul_data = ul_data.cuda().float().permute(0, 2, 1)
-                data_ = torch.cat((data, ul_data), dim=0)  # VAT
-                afford_pred = torch.sigmoid(self.model(data_))
-            else:
-                # Model output here
-                # print(data.shape)
-                afford_output = (self.model(data,torch.tanh(affordance_embeddings)))
+                self.optimizer.zero_grad()
+                if self.train_unlabel_loader is not None:
+                    ul_data = ul_data.cuda().float().permute(0, 2, 1)
+                    data_ = torch.cat((data, ul_data), dim=0)  # VAT
+                    afford_pred = torch.sigmoid(self.model(data_))
+                else:
+                    # Model output here
+                    # print(data.shape)
+                    afford_output = (self.model(data,torch.tanh(affordance_embeddings)))
 
-            if self.train_unlabel_loader is not None and loss_label is not 'weighted':
-                l_pred = afford_pred[:batch_size, :, :]  # VAT
-                ul_pred = afford_pred[batch_size:, :, :]  # VAT
-                loss = self.loss(self.model, data, ul_data,
-                                l_pred, label, ul_pred, self.epoch)  # VAT
-            elif self.train_unlabel_loader is None and loss_label is not 'weighted':
-                loss = self.loss(afford_pred, label)
-            else:
-                # loss_fn = torch.nn.MSELoss()
-                # curr_label = torch.where(label[:,:,label_idx]>0,1,0)
-                # loss_clip_emb = loss_fn(afford_output,label[:,:,label_idx])
-                # afford_output = afford_output.squeeze(1).unsqueeze(-1)
-                # curr_label = label[:,:,11].unsqueeze(-1)
-                # print(afford_output.shape,label.shape)
+                if self.train_unlabel_loader is not None and loss_label is not 'weighted':
+                    l_pred = afford_pred[:batch_size, :, :]  # VAT
+                    ul_pred = afford_pred[batch_size:, :, :]  # VAT
+                    loss = self.loss(self.model, data, ul_data,
+                                    l_pred, label, ul_pred, self.epoch)  # VAT
+                elif self.train_unlabel_loader is None and loss_label is not 'weighted':
+                    loss = self.loss(afford_pred, label)
+                else:
+                    # loss_fn = torch.nn.MSELoss()
+                    # curr_label = torch.where(label[:,:,label_idx]>0,1,0)
+                    # loss_clip_emb = loss_fn(afford_output,label[:,:,label_idx])
+                    # afford_output = afford_output.squeeze(1).unsqueeze(-1)
+                    # curr_label = label[:,:,11].unsqueeze(-1)
+                    # print(afford_output.shape,label.shape)
 
-                afford_output = afford_output.unsqueeze(-1).repeat(1,1,1,18).permute(0,2,3,1)
-                # print(afford_output.shape,affordance_embeddings.shape)
-                afford_pred_corr = torch.clamp(cos((afford_output),(affordance_embeddings)))
+                    # afford_output = afford_output.unsqueeze(-1).repeat(1,1,1,18).permute(0,2,3,1)
+                    # print(afford_output.shape,affordance_embeddings.shape)
+                    # afford_pred_corr = (cos((afford_output),(affordance_embeddings)))
 
-                # softmax_fn = torch.nn.Softmax(dim=-1)
-                # afford_pred_corr = softmax_fn(afford_pred_corr)
-                # label = softmax_fn(label)
+                    # softmax_fn = torch.nn.Softmax(dim=-1)
+                    # afford_pred_corr = softmax_fn(afford_pred_corr)
+                    # label = softmax_fn(label)
+                    # print(afford_output.shape,label.shape)
+                    loss = self.loss(afford_output,label[:,:,label_idx],class_weights)
+                    # loss_fn = torch.nn.MSELoss()
+                    # loss = loss_fn(afford_pred_corr,label)
+                    # loss = loss_clip_emb 
+                # print("shapes: ",afford_pred.shape,label.shape,class_weights.shape)
+                if i%10 == 0:
+                    print(loss)
+                if i%800 ==0:
+                    print(i)
+                    torch.save(self.model.state_dict(), opj(self.work_dir, 'model_%d.t7' % i))
 
-                loss = self.loss(afford_pred_corr,label,class_weights)
-                # loss_fn = torch.nn.MSELoss()
-                # loss = loss_fn(afford_pred_corr,label)
-                # loss = loss_clip_emb 
-            # print("shapes: ",afford_pred.shape,label.shape,class_weights.shape)
-            # if i%10 == 0:
-            #     print(loss)
-            # if i%800 ==0:
-            #     print(i)
-            #     torch.save(self.model.state_dict(), opj(self.work_dir, 'model_%d.t7' % i))
+                i=i+1
+                loss.backward()
+                self.optimizer.step()
 
-            i=i+1
-            loss.backward()
-            self.optimizer.step()
-
-            count += batch_size * num_point
-            train_loss += loss.item()
-            wandb.log({'loss':loss.cpu().item() , 'lr':float(self.optimizer.param_groups[0]['lr'])})
+                count += batch_size * num_point
+                train_loss += loss.item()
+                wandb.log({'loss':loss.cpu().item() , 'lr':float(self.optimizer.param_groups[0]['lr'])})
 
         self.scheduler.step()
         if self.bn_momentum != None:

@@ -9,12 +9,8 @@ from tensorboardX import SummaryWriter
 from utils import *
 from utils.eval import evaluation
 from time import time
-import wandb
 
-##CLIP Imports
-import clip
 
-# wandb.login()
 class Trainer(object):
     def __init__(self, cfg, running):
         super().__init__()
@@ -44,41 +40,12 @@ class Trainer(object):
 
     def train(self):
         train_loss = 0.0
-        loss_label = 'weighted'
         count = 0.0
         self.model.train()
         num_batches = len(self.train_loader)
         start = time()
         self.logger.cprint("Epoch(%d) begin training........" % self.epoch)
-        
-        
-        ##CLIP Embedding stuff##
-        clip_model, preprocess = clip.load("ViT-B/32", device='cuda')
-        
-        affordances_list =['grasp', 'contain', 'lift', 'openable', 'layable', 'sittable',
-              'support', 'wrap_grasp', 'pourable', 'move', 'displaY', 'pushable', 'pull',
-              'listen', 'wear', 'press', 'cut', 'stab']
-
-        # affordances_list = ['cut','stab']
-        
-        cos = torch.nn.CosineSimilarity(dim=-1,eps=1e-6)
-        i = 0
-        ##CLIP Embedding Stuff ends##
-        wandb.init(project=self.cfg.model.type, config=self.cfg.training_cfg)
-        for data, data1, label, _, _, class_weights in tqdm(self.train_loader, total=len(self.train_loader), smoothing=0.9):
-
-            data, label, class_weights = data.float().cuda(), label.float().cuda(), class_weights.float().cuda()
-            data = data.permute(0, 2, 1)
-            batch_size = data.size()[0]
-            num_point = data.size()[2]
-            
-            # print("shapes",data.shape,label.shape)
-            affordance_token = clip.tokenize(affordances_list).cuda()
-            affordance_embeddings = clip_model.encode_text(affordance_token)#.unsqueeze(0)
-            affordance_embeddings = affordance_embeddings.repeat(data.shape[0],data.shape[2],1,1) # M(18) x 512 shape
-
-            # print(affordance_embeddings.shape)
-
+        for data, data1, label, _, _ in tqdm(self.train_loader, total=len(self.train_loader), smoothing=0.9):
             if self.train_unlabel_loader is not None:
                 try:
                     ul_data, ul_data1, _, _ = next(self.unlabel_loader_iter)
@@ -88,58 +55,31 @@ class Trainer(object):
                     ul_data, ul_data1, _, _ = next(self.unlabel_loader_iter)
                     ul_data, ul_data1 = ul_data.float(), ul_data1.float()
 
+            data, label = data.float().cuda(), label.float().cuda()
+            data = data.permute(0, 2, 1)
+            batch_size = data.size()[0]
+            num_point = data.size()[2]
             self.optimizer.zero_grad()
             if self.train_unlabel_loader is not None:
                 ul_data = ul_data.cuda().float().permute(0, 2, 1)
                 data_ = torch.cat((data, ul_data), dim=0)  # VAT
                 afford_pred = torch.sigmoid(self.model(data_))
             else:
-                # Model output here
-                # print(data.shape)
-                afford_output = (self.model(data,torch.tanh(affordance_embeddings)))
-
-            if self.train_unlabel_loader is not None and loss_label is not 'weighted':
+                afford_pred = torch.sigmoid(self.model(data))
+            afford_pred = afford_pred.permute(0, 2, 1).contiguous()
+            if self.train_unlabel_loader is not None:
                 l_pred = afford_pred[:batch_size, :, :]  # VAT
                 ul_pred = afford_pred[batch_size:, :, :]  # VAT
                 loss = self.loss(self.model, data, ul_data,
-                                l_pred, label, ul_pred, self.epoch)  # VAT
-            elif self.train_unlabel_loader is None and loss_label is not 'weighted':
-                loss = self.loss(afford_pred, label)
+                                 l_pred, label, ul_pred, self.epoch)  # VAT
             else:
-                # loss_fn = torch.nn.MSELoss()
-                # curr_label = torch.where(label[:,:,label_idx]>0,1,0)
-                # loss_clip_emb = loss_fn(afford_output,label[:,:,label_idx])
-                # afford_output = afford_output.squeeze(1).unsqueeze(-1)
-                # curr_label = label[:,:,11].unsqueeze(-1)
-                # print(afford_output.shape,label.shape)
+                loss = self.loss(afford_pred, label)
 
-                afford_output = afford_output.unsqueeze(-1).repeat(1,1,1,18).permute(0,2,3,1)
-                # print(afford_output.shape,affordance_embeddings.shape)
-                afford_pred_corr = torch.clamp(cos((afford_output),(affordance_embeddings)))
-
-                # softmax_fn = torch.nn.Softmax(dim=-1)
-                # afford_pred_corr = softmax_fn(afford_pred_corr)
-                # label = softmax_fn(label)
-
-                loss = self.loss(afford_pred_corr,label,class_weights)
-                # loss_fn = torch.nn.MSELoss()
-                # loss = loss_fn(afford_pred_corr,label)
-                # loss = loss_clip_emb 
-            # print("shapes: ",afford_pred.shape,label.shape,class_weights.shape)
-            # if i%10 == 0:
-            #     print(loss)
-            # if i%800 ==0:
-            #     print(i)
-            #     torch.save(self.model.state_dict(), opj(self.work_dir, 'model_%d.t7' % i))
-
-            i=i+1
             loss.backward()
             self.optimizer.step()
 
             count += batch_size * num_point
             train_loss += loss.item()
-            wandb.log({'loss':loss.cpu().item() , 'lr':float(self.optimizer.param_groups[0]['lr'])})
-
         self.scheduler.step()
         if self.bn_momentum != None:
             self.model.apply(lambda x: self.bn_momentum(x, self.epoch))
@@ -147,10 +87,6 @@ class Trainer(object):
         outstr = 'Train(%d), loss: %.6f, time: %d s' % (
             self.epoch, train_loss*1.0/num_batches, epoch_time//1)
         self.writer.add_scalar('Loss', train_loss*1.0/num_batches, self.epoch)
-        # 获取梯度信息
-        for name, param in self.model.named_parameters():
-            if param.grad is not None:
-                self.writer.add_scalar('grad/{}'.format(name), torch.norm(param.grad), self.epoch)
         self.logger.cprint(outstr)
         self.epoch += 1
 

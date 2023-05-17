@@ -36,6 +36,7 @@ training_cfg = dict(
     semi=False,
     rotate_type=None,
     batch_size=16,
+    # batch_size=8,
     num_workers=8,
     epoch=200,
     seed=1,

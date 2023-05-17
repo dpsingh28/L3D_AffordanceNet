@@ -39,6 +39,25 @@ class AffordNetDataset(Dataset):
         self.load_data()
 
         self.affordance = self.all_data[0]["affordance"]
+        
+        self.synonyms = {'grasp': ['grip','clutch','clasp','hold','clench','catch','grab'],
+                         'contain': ['hold','carry','accomodate'],
+                         'lift': ['raise','uplift','elevate', 'rise'],
+                         'openable': ['unlock','ajar'],
+                         'layable': ['place','rest','station','locate'],
+                         'sittable': ['seat','settle','rest','set'],
+                         'support': ['hold up','bear','carry','brace','buttress'],
+                         'wrap_grasp': ['blanket','envelop','engirdle','encircle'],
+                         'pourable': ['flow','spill','discharge','drain'],
+                         'move': ['shift','motion','carry','transport'],
+                         'displaY': ['exhibit','show','put on view','present'],
+                         'pushable': ['shove','thrust','drive'],
+                         'pull': ['tug','drag','haul','lug'],
+                         'listen': ['hear','attend'],
+                         'wear': ['put on','don','sport'],
+                         'press': ['pin','thumb','force'],
+                         'cut': ['gash','slash','slit','lacerate','injure'],
+                         'stab': ['knife','skewer','pierce','puncture']}
 
         return
 
@@ -121,12 +140,29 @@ class AffordNetDataset(Dataset):
         data_info = data_dict["data_info"]
         model_data = data_info["coordinate"].astype(np.float32)
         labels = data_info["label"]
+        
+        # print("=================================================================================")
+        # print(data_dict["affordance"])
+        # print("#################################################################################")
+        # print("labels: ",len(labels))
+        # print("*********************************************************************************")
+        # print("self.affordance: ",self.affordance)
+        # final_aff = []
         for aff in self.affordance:
+            # final_aff.append(aff)
             temp = labels[aff].astype(np.float32).reshape(-1, 1)
             model_data = np.concatenate((model_data, temp), axis=1)
-
+            
+            # for syn_aff in self.synonyms[aff]:
+            #     final_aff.append(syn_aff)
+            #     model_data = np.concatenate((model_data, temp), axis=1)
+                
+        # print("#################################################################################")
+        # print(len(final_aff))
         datas = model_data[:, :3]
         targets = model_data[:, 3:]
+        
+        # print(model_data.shape)
 
         if self.rotate != 'None':
             if self.split == 'train':
@@ -154,6 +190,7 @@ class AffordNetDataset(Dataset):
         # print(class_weights)
         
         return datas, datas, targets, modelid, modelcat, class_weights
+        # return datas, datas, targets, modelid, modelcat, class_weights, final_aff
 
     def __len__(self):
         return len(self.all_data)

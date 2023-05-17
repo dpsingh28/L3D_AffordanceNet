@@ -7,6 +7,7 @@ import numpy as np
 from torch.autograd import Variable
 import contextlib
 
+
 class WeightedEstimationLoss(nn.Module):
     def __init__(self):
         super(WeightedEstimationLoss, self).__init__()
@@ -15,19 +16,35 @@ class WeightedEstimationLoss(nn.Module):
         # print(weights.shape) # [32, 1, 18]
         # print(pred.shape) # [32, 2048, 18]
         temp1 = -torch.mul(1-target, torch.log(1-pred+1e-6))
-        # temp2 = -torch.mul(weights,
-        #                    torch.mul(target, torch.log(pred+1e-6)))
-        
-        temp2 = -torch.mul(target, torch.log(pred+1e-6))
-        
-        # temp = (torch.abs(pred-target))
-        # temp = temp1+temp2
-        # temp3 = -torch.mul(weights,(torch.log(pred+1e-6)))
-        temp = temp1 + temp2
+        temp2 = -torch.mul(weights,
+                           torch.mul(target, torch.log(pred+1e-6)))
+        temp = temp1+temp2
         WCELoss = torch.sum(torch.mean(temp, (0, 1)))
-        # WCELoss = torch.mean(temp)
 
         return WCELoss
+
+
+# class WeightedEstimationLoss(nn.Module):
+#     def __init__(self):
+#         super(WeightedEstimationLoss, self).__init__()
+
+#     def forward(self, pred, target, weights):
+#         # print(weights.shape) # [32, 1, 18]
+#         # print(pred.shape) # [32, 2048, 18]
+#         temp1 = -torch.mul(1-target, torch.log(1-pred+1e-6))
+#         # temp2 = -torch.mul(weights,
+#         #                    torch.mul(target, torch.log(pred+1e-6)))
+        
+#         temp2 = -torch.mul(target, torch.log(pred+1e-6))
+        
+#         # temp = (torch.abs(pred-target))
+#         # temp = temp1+temp2
+#         # temp3 = -torch.mul(weights,(torch.log(pred+1e-6)))
+#         temp = temp1 + temp2
+#         WCELoss = torch.sum(torch.mean(temp, (0, 1)))
+#         # WCELoss = torch.mean(temp)
+
+#         return WCELoss
         
 class EstimationLoss(nn.Module):
     def __init__(self):

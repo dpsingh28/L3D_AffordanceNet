@@ -4,15 +4,22 @@ import torch
 import torch.nn as nn
 import os
 from os.path import join as opj
+import sys
 from tqdm import tqdm
 from tensorboardX import SummaryWriter
 from utils import *
 from utils.eval import evaluation
+from pytorch3d.ops import sample_farthest_points
 from time import time
 import wandb
+import clip
 
 ##CLIP Imports
-import clip
+import sys
+
+# sys.path.insert(0 , '/home/daman/AffordanceNet_daman/utils/CG3D')
+
+# from CG3D.models import PointMLP
 
 # wandb.login()
 class Trainer(object):
@@ -65,14 +72,25 @@ class Trainer(object):
         i = 0
         ##CLIP Embedding Stuff ends##
         wandb.init(project=self.cfg.model.type, config=self.cfg.training_cfg)
+        # for data, data1, label, _, _, class_weights, final_aff in tqdm(self.train_loader, total=len(self.train_loader), smoothing=0.9):
         for data, data1, label, _, _, class_weights in tqdm(self.train_loader, total=len(self.train_loader), smoothing=0.9):
-
+            
+            # print("data.shape: ", data.shape)
+            # data,_ = sample_farthest_points(data, )
+            # cg3d_pointml = PointMLP.Model()
             data, label, class_weights = data.float().cuda(), label.float().cuda(), class_weights.float().cuda()
             data = data.permute(0, 2, 1)
             batch_size = data.size()[0]
             num_point = data.size()[2]
             
+            # print("forward pass in PointMLP")
+            # model_out = cg3d_pointml(data)
+            # print("model_out: ", model_out)
+            
             # print("shapes",data.shape,label.shape)
+            # affordances_list = list(np.asarray(final_aff)[:,0])
+            # print(affordances_list)
+            num_affordances = len(affordances_list)
             affordance_token = clip.tokenize(affordances_list).cuda()
             affordance_embeddings = clip_model.encode_text(affordance_token)#.unsqueeze(0)
             affordance_embeddings = affordance_embeddings.repeat(data.shape[0],data.shape[2],1,1) # M(18) x 512 shape
@@ -97,6 +115,8 @@ class Trainer(object):
                 # Model output here
                 # print(data.shape)
                 afford_output = (self.model(data,torch.tanh(affordance_embeddings)))
+                # print("#################################################################################")
+                # print(afford_output.shape)
 
             if self.train_unlabel_loader is not None and loss_label is not 'weighted':
                 l_pred = afford_pred[:batch_size, :, :]  # VAT
@@ -112,18 +132,28 @@ class Trainer(object):
                 # afford_output = afford_output.squeeze(1).unsqueeze(-1)
                 # curr_label = label[:,:,11].unsqueeze(-1)
                 # print(afford_output.shape,label.shape)
-
-                afford_output = afford_output.unsqueeze(-1).repeat(1,1,1,18).permute(0,2,3,1)
+                
+                # pytorch_total_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+                # print("w/o ulip: ", pytorch_total_params)
+                
+                # return
+                
+                afford_output = afford_output.unsqueeze(-1).repeat(1,1,1,num_affordances).permute(0,2,3,1)
+                # print("*********************************************************************************")
+                # print(afford_output.shape)
                 # print(afford_output.shape,affordance_embeddings.shape)
-                afford_pred_corr = torch.clamp(cos((afford_output),(affordance_embeddings)))
+                afford_pred_corr = cos((afford_output),(affordance_embeddings))
+                
+                # print(afford_pred_corr.shape)
 
                 # softmax_fn = torch.nn.Softmax(dim=-1)
                 # afford_pred_corr = softmax_fn(afford_pred_corr)
                 # label = softmax_fn(label)
 
-                loss = self.loss(afford_pred_corr,label,class_weights)
-                # loss_fn = torch.nn.MSELoss()
-                # loss = loss_fn(afford_pred_corr,label)
+                # loss_fn = self.loss(afford_pred_corr,label,class_weights)
+                # loss = self.loss(afford_pred_corr,label,class_weights)
+                loss_fn = torch.nn.MSELoss()
+                loss = loss_fn(afford_pred_corr,label)
                 # loss = loss_clip_emb 
             # print("shapes: ",afford_pred.shape,label.shape,class_weights.shape)
             # if i%10 == 0:

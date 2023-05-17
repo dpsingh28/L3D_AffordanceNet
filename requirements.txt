@@ -6,7 +6,7 @@ h5py==3.1.0
 tqdm==4.19.9
 trimesh==3.8.19
 transforms3d==0.3.1
-numpy
+# numpy
 addict==2.4.0
 pynvml==8.0.4
 PyYAML==5.3.1

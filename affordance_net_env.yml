@@ -1,0 +1,4 @@
+name: affordance_net
+channels:
+  - defaults
+prefix: /home/daman/anaconda3/envs/affordance_net

@@ -5,6 +5,7 @@ from os.path import join as opj
 from tqdm import tqdm
 from sklearn.metrics import average_precision_score, f1_score, roc_auc_score
 
+import wandb
 import torch
 import imageio
 import pytorch3d
@@ -27,7 +28,7 @@ import clip
 device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 
 def get_points_renderer(
-    image_size=512, device=None, radius=0.01, background_color=(1, 1, 1)
+    image_size=512, device=None, radius=0.01, background_color=(1, 180/255, 18/255)
 ):
 
     if device is None:
@@ -70,8 +71,8 @@ def evaluation(logger, cfg, model, test_loader, affordance):
         total_L2distance = 0
         count = 0.0
         for i,  temp_data in tqdm(enumerate(test_loader), total=len(test_loader), smoothing=0.9):
-            # if i%150!=0:
-            #     continue
+            if i%150!=0:
+                continue
             # if i<150:
             #     continue                
             (data, data1, label, modelid, modelcat, class_weights) = temp_data
@@ -89,36 +90,46 @@ def evaluation(logger, cfg, model, test_loader, affordance):
             afford_output = (model(data,torch.tanh(affordance_embeddings)))
             afford_output = afford_output.unsqueeze(-1).repeat(1,1,1,18).permute(0,2,3,1)
             # print(afford_output.shape,affordance_embeddings.shape)
-            afford_pred = torch.sigmoid(cos((afford_output),(affordance_embeddings)))
+            afford_pred = (cos((afford_output),(affordance_embeddings)))
 
             # afford_pred = torch.sigmoid(model(data))
             # afford_pred = afford_pred.permute(0, 2, 1).contiguous()
 
             # print(afford_pred.shape)
 
-            # for l_idx in range(18):
+            for l_idx in range(18):
 
-            #     afford_colors = torch.ones((1,2048,3)).cuda()
-            #     label_colors = torch.ones((1,2048,3)).cuda()
+                afford_colors = torch.ones((1,2048,3)).cuda()*0.75
+                label_colors = torch.ones((1,2048,3)).cuda()
 
-            #     label_colors = label_colors*(label[:,:,l_idx].squeeze(0).unsqueeze(-1).repeat(1,1,3)[0,0:,:])#*10
+                afford_pred = torch.where(afford_pred>0.18,1,0)
+
+                label_colors = label_colors*(label[:,:,l_idx].squeeze(0).unsqueeze(-1).repeat(1,1,3)[0,0:,:])#*10
                 
-            #     afford_colors = afford_colors*(afford_pred.squeeze(0)[:,l_idx].unsqueeze(-1).repeat(1,1,3)[0,0:,:])#*100            
+                # print(label[:,:,l_idx])
 
-            #     point_data = data.permute(0,2,1)
+                # torch.where(label_colors[:,:,1]==0 , 1 ,label_colors[:,:,1])
+                # torch.where(label_colors[:,:,2:]==0 , 0 ,label_colors[:,:,2:])
+                
+                afford_colors = afford_colors*(afford_pred.squeeze(0)[:,l_idx].unsqueeze(-1).repeat(1,1,3)[0,0:,:])#*100            
 
-            #     point_cloud_pred = Pointclouds(points = point_data, features=afford_colors)
-            #     point_cloud_label = Pointclouds(points = point_data, features=label_colors)
+                # torch.where(afford_colors[:,:,1]==0 , 1 ,afford_colors[:,:,1])
+                # torch.where(afford_colors[:,:,2:]==0 , 0 , afford_colors[:,:,2:])
 
-            #     num_views : int = 90
-            #     R, T = pytorch3d.renderer.look_at_view_transform(dist= 6 , elev= 0 ,azim= np.linspace(-180,180 , num_views, endpoint=False))
-            #     cameras = pytorch3d.renderer.FoVPerspectiveCameras(device=device, fov = 60, R=R, T=T)
-            #     lights = pytorch3d.renderer.PointLights(location = [[0,10,0]] , device=device)
-            #     pred_point_image = point_renderer(point_cloud_pred.extend(num_views), cameras=cameras , lights=lights)
-            #     label_point_image = point_renderer(point_cloud_label.extend(num_views), cameras=cameras , lights=lights)
+                point_data = data.permute(0,2,1)
 
-            #     imageio.mimsave('/home/daman/L3D_AffordanceNet_jay/image/pn2/{}_{}_affordance_{}_pred.gif'.format(modelcat[0], modelid[0],l_idx), pred_point_image.cpu().numpy(), fps=30)
-            #     imageio.mimsave('/home/daman/L3D_AffordanceNet_jay/image/pn2/{}_{}_affordance_{}_label.gif'.format(modelcat[0], modelid[0],l_idx), label_point_image.cpu().numpy(), fps=30)
+                point_cloud_pred = Pointclouds(points = point_data, features=afford_colors)
+                point_cloud_label = Pointclouds(points = point_data, features=label_colors)
+
+                num_views : int = 90
+                R, T = pytorch3d.renderer.look_at_view_transform(dist= 6 , elev= 0 ,azim= np.linspace(-180,180 , num_views, endpoint=False))
+                cameras = pytorch3d.renderer.FoVPerspectiveCameras(device=device, fov = 60, R=R, T=T)
+                lights = pytorch3d.renderer.PointLights(location = [[0,10,0]] , device=device)
+                pred_point_image = point_renderer(point_cloud_pred.extend(num_views), cameras=cameras , lights=lights)
+                label_point_image = point_renderer(point_cloud_label.extend(num_views), cameras=cameras , lights=lights)
+
+                imageio.mimsave('/home/daman/AffordanceNet_daman/image/pn2/train/{}_{}_affordance_{}_pred.gif'.format(modelcat[0], modelid[0],l_idx), pred_point_image.cpu().numpy(), fps=30)
+                imageio.mimsave('/home/daman/AffordanceNet_daman/image/pn2/train/{}_{}_affordance_{}_label.gif'.format(modelcat[0], modelid[0],l_idx), label_point_image.cpu().numpy(), fps=30)
 
             L2distance = torch.sum(
                 torch.pow(label-afford_pred, 2), dim=(0, 1))
@@ -174,6 +185,7 @@ def evaluation(logger, cfg, model, test_loader, affordance):
     IOU = np.nanmean(IOU, axis=0)
     for i in range(AP.size):
         outstr = affordance[i]+'_AP = ' + str(AP[i])
+        
         logger.cprint(outstr)
         outstr = affordance[i]+'_AUC = ' + str(AUC[i])
         logger.cprint(outstr)
@@ -182,7 +194,17 @@ def evaluation(logger, cfg, model, test_loader, affordance):
         outstr = affordance[i]+'_MSE = ' + \
             str(total_L2distance[i].item()/count)
         logger.cprint(outstr)
+        
+        # wandb.log({str(affordance[i]+'_AP'):AP[i],
+        #           str(affordance[i]+'_AUC'):AUC[i],
+        #           str(affordance[i]+'_aIOU'):IOU[i],
+        #           str(affordance[i]+'_MSE'):total_L2distance[i].item()/count})
     outstr = 'Test :: test mAP: %.6f, test mAUC: %.6f, test maIOU: %.6f, test MSE: %.6f' % (
-        np.mean(AP), np.mean(AUC), np.mean(IOU), MSE)
+        np.nanmean(AP), np.nanmean(AUC), np.nanmean(IOU), MSE)
+    
+    # wandb.log({'test mean_AP' : np.nanmean(AP),
+    #            'test mean_AUC' : np.nanmean(AUC),
+    #            'test mean_aIOU' : np.nanmean(IOU),
+    #            'test MSE' : MSE})
     logger.cprint(outstr)
-    return np.mean(AP)
+    return np.nanmean(AP)
